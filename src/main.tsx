@@ -1,17 +1,19 @@
 import ReactDOM from "react-dom/client";
 import { RouterProvider, Router } from "@tanstack/react-router";
 import { root } from "./routes/root";
-import { appRoute, indexRoute, productRoute } from "./routes";
+import { appRoute, categoryRoute, indexRoute, productRoute } from "./routes";
 import "./index.css";
 
 const routeTree = root.addChildren([
-  indexRoute.addChildren([appRoute.addChildren([productRoute])]),
+  indexRoute.addChildren([
+    appRoute.addChildren([productRoute.addChildren([categoryRoute])]),
+  ]),
 ]);
 
 // Set up a Router instance
 const router = new Router({
   routeTree,
-  defaultPreload: "intent",
+  // defaultPreload: "intent",
 });
 
 // Register things for typesafety

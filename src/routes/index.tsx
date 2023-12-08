@@ -4,14 +4,16 @@ import {
   Route,
   redirect,
   useNavigate,
+  useParams,
 } from "@tanstack/react-router";
 import { root } from "./root";
 import { z } from "zod";
 import { motion } from "framer-motion";
+import { memo } from "react";
 
 const IndexComponent = () => {
   return (
-    <div className="bg-zinc-950 h-screen flex p-16 justify-center">
+    <div className="bg-zinc-950 min-h-screen flex p-16 justify-center">
       <div className="bg-zinc-900 container max-w-3xl rounded-lg border border-zinc-600 p-6 ">
         <Outlet />
       </div>
@@ -39,7 +41,7 @@ const Label = ({ label }: { label: string }) => {
   return (
     <motion.div
       initial={{
-        borderColor: "rgb(22 163 74)",
+        borderColor: "rgb(74 222 128)",
       }}
       animate={{
         borderColor: "rgb(113 113 122)",
@@ -101,6 +103,8 @@ const AppComponent = () => {
                 params={{
                   product_id: value,
                 }}
+                // @ts-expect-error sjnsak
+                search={(s) => ({ ...s })}
               >
                 {key}
               </Link>
@@ -109,7 +113,7 @@ const AppComponent = () => {
         </div>
         <div>
           <button
-            className="text-sm border border-zinc-700 bg-zinc-800 py-0.5 px-2 rounded"
+            className="text-sm border tabular-nums border-zinc-700 bg-zinc-800 py-0.5 px-2 rounded hover:border-green-600 transition-colors duration-200"
             onClick={() => {
               navigate({
                 search: (search) => {
@@ -159,6 +163,12 @@ const ProductComponent = () => {
   const search = productRoute.useSearch({
     select: (search) => search.category_count,
   });
+  const params = useParams({
+    from: "/app/$product_id/$category_id",
+    select: (params) => {
+      return params.product_id;
+    },
+  });
   const navigate = useNavigate();
 
   productReRenderCount++;
@@ -167,9 +177,33 @@ const ProductComponent = () => {
     <div className="text-zinc-400 relative mt-4">
       <Label label="Categories" key={productReRenderCount} />
       <div className="py-4 text-sm flex justify-between items-center px-2">
-        <div>{data.join(", ")}</div>
+        <div className="flex gap-2">
+          {data.map((category) => {
+            return (
+              <Link
+                key={category}
+                to="/app/$product_id/$category_id"
+                className="px-3 rounded text-sm py-1 transition duration-200"
+                inactiveProps={{
+                  className: "hover:bg-zinc-800",
+                }}
+                activeProps={{
+                  className: "text-green-400 bg-green-900/30",
+                }}
+                params={{
+                  product_id: params,
+                  category_id: category.toLowerCase(),
+                }}
+                // @ts-expect-error sjnsak
+                search={(s) => ({ ...s })}
+              >
+                {category}
+              </Link>
+            );
+          })}
+        </div>
         <button
-          className="text-sm border border-zinc-700 bg-zinc-800 py-0.5 px-2 rounded"
+          className="text-sm border tabular-nums border-zinc-700 bg-zinc-800 py-0.5 px-2 rounded hover:border-green-600 transition-colors duration-200"
           onClick={() => {
             navigate({
               search: (search) => {
@@ -186,16 +220,35 @@ const ProductComponent = () => {
           Category Count: {search || 0}
         </button>
       </div>
+      <div className="p-4">
+        <Outlet />
+      </div>
     </div>
   );
 };
 
+const ProductComponentMemo = memo(ProductComponent);
+
 export const productRoute = new Route({
   getParentRoute: () => appRoute,
   path: "$product_id",
-  component: ProductComponent,
+  component: ProductComponentMemo,
+  beforeLoad: (p) => {
+    const segments = p.location.pathname.split("/");
+
+    if (segments.length !== 4) {
+      throw redirect({
+        to: "/app/$product_id/$category_id",
+        params: {
+          product_id: segments[2],
+          category_id: "all",
+        },
+        search: { ...p.search },
+      });
+    }
+  },
   loader: async ({ params }) => {
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    // await new Promise((resolve) => setTimeout(resolve, 200));
     const { product_id } = params;
 
     const categoriesMap = {
@@ -206,5 +259,78 @@ export const productRoute = new Route({
 
     const categories = categoriesMap[product_id as keyof typeof categoriesMap];
     return categories;
+  },
+});
+
+const capitalize = (str: string) => {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+};
+
+let categoryReRenderCount = 0;
+
+const CategoryComponent = () => {
+  const data = categoryRoute.useLoaderData();
+  const category = categoryRoute.useParams({
+    select(search) {
+      return search.category_id;
+    },
+  });
+
+  categoryReRenderCount++;
+
+  return (
+    <div className="text-sm relative">
+      <Label label={capitalize(category)} key={categoryReRenderCount} />
+      <div className="py-4 px-2 grid grid-cols-3 gap-4">
+        {Array.from({ length: data }).map((_, i) => {
+          return (
+            <div
+              key={i}
+              className="bg-zinc-800 rounded-md p-3 flex flex-col gap-1.5"
+            >
+              <div className="text-zinc-400 bg-zinc-900 h-20 w-full rounded"></div>
+              <div className="text-zinc-400 h-4 w-4/5 bg-zinc-900 rounded-full"></div>
+              <div className="text-zinc-400 h-4 w-1/2 bg-zinc-900 rounded-full"></div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const CategoryMemo = memo(CategoryComponent);
+
+const data = {
+  electronics: {
+    all: 8,
+    phones: 4,
+    laptops: 1,
+    tablets: 3,
+  },
+  clothing: {
+    all: 6,
+    shirts: 4,
+    pants: 1,
+    shoes: 1,
+  },
+  books: {
+    all: 10,
+    fiction: 3,
+    biography: 4,
+    history: 2,
+    science: 1,
+  },
+};
+
+export const categoryRoute = new Route({
+  getParentRoute: () => productRoute,
+  path: "$category_id",
+  component: CategoryMemo,
+  loader: async ({ params }) => {
+    const { category_id, product_id } = params;
+
+    // @ts-expect-error shasbhjhj
+    return data[product_id][category_id];
   },
 });
