@@ -1,7 +1,6 @@
 import { Route } from "@tanstack/react-router";
 import { productRoute } from "../$product_id";
 import { Label } from "../../../components/Label";
-import { memo } from "react";
 
 const capitalize = (str: string) => {
   return str.charAt(0).toUpperCase() + str.slice(1);
@@ -62,12 +61,11 @@ const data = {
   },
 } as Record<string, Record<string, number>>;
 
-const CategoryMemo = memo(CategoryComponent);
-
 export const categoryRoute = new Route({
   getParentRoute: () => productRoute,
   path: "$category_id",
-  component: CategoryMemo,
+  component: CategoryComponent,
+  // pendingComponent: () => <div>Loadingggg</div>,
   loader: async ({ params }) => {
     const { category_id, product_id } = params;
 

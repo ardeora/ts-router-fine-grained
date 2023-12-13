@@ -8,7 +8,6 @@ import {
 } from "@tanstack/react-router";
 import { appRoute } from "..";
 import { Label } from "../../components/Label";
-import { memo } from "react";
 
 let productReRenderCount = 0;
 export const ProductComponent = () => {
@@ -79,12 +78,10 @@ export const ProductComponent = () => {
   );
 };
 
-const ProductMemo = memo(ProductComponent);
-
 export const productRoute = new Route({
   getParentRoute: () => appRoute,
   path: "$product_id",
-  component: ProductMemo,
+  component: ProductComponent,
   beforeLoad: (p) => {
     // Feeling lazy, so we'll just redirect to the first category
     const segments = p.location.pathname.split("/");
